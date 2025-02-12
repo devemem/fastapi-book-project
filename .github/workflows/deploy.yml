@@ -27,8 +27,8 @@ jobs:
       - name: Build and Push Docker Image to ECR
         run: |
           docker build -t fastapi-app .
-          docker tag fastapi-app:latest 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fastapi-app:latest
-          docker push 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fastapi-app:latest
+          docker tag fast-api:latest 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fast-api:latest
+          docker push 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fast-api:latest
 
       - name: SSH into EC2 and Deploy
         uses: appleboy/ssh-action@master
@@ -44,7 +44,7 @@ jobs:
             newgrp docker
 
             aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 522814707197.dkr.ecr.eu-north-1.amazonaws.com
-            docker pull 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fastapi-app:latest
-            docker stop fastapi-app || true
-            docker rm fastapi-app || true
-            docker run -d -p 8000:8000 --name fastapi-app 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fastapi-app:latest
+            docker pull 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fast-api:latest
+            docker stop fast-api || true
+            docker rm fast-api || true
+            docker run -d -p 8000:8000 --name fast-api 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fast-api:latest
