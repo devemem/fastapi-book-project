@@ -1,110 +1,3 @@
-# name: Deploy FastAPI App
-
-# on:
-#   push:
-#     branches:
-#       - main
-
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout Repository
-#         uses: actions/checkout@v3
-
-#       - name: Configure AWS Credentials
-#         uses: aws-actions/configure-aws-credentials@v1
-#         with:
-#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           aws-region: eu-north-1  # Ensure this is your AWS ECR region
-
-#       - name: Log in to Amazon ECR
-#         run: |
-#           aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 522814707197.dkr.ecr.eu-north-1.amazonaws.com 
-
-#       - name: Build and Push Docker Image to ECR
-#         run: |
-#           docker build -t fast-api .
-#           docker tag fast-api:latest 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fast-api:latest
-#           docker push 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fast-api:latest
-
-#       - name: SSH into EC2 and Deploy
-#         uses: appleboy/ssh-action@master
-#         with:
-#           host: ${{ secrets.AWS_VM_IP }}
-#           username: ${{ secrets.AWS_VM_USERNAME }}
-#           key: ${{ secrets.AWS_SSH_KEY }}
-#           script: |
-#             # Install Docker (Check if using Amazon Linux or Ubuntu)
-#             if [ -x "$(command -v yum)" ]; then
-#               sudo yum install -y docker
-#             elif [ -x "$(command -v apt-get)" ]; then
-#               sudo apt-get update
-#               sudo apt-get install -y docker.io
-#             fi
-            
-#             # Start and enable Docker
-#             sudo systemctl start docker
-#             sudo systemctl enable docker
-#             sudo usermod -aG docker $USER
-#             newgrp docker
-            
-#             # Authenticate and Pull Image from ECR
-#             aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 522814707197.dkr.ecr.eu-north-1.amazonaws.com
-#             docker pull 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fast-api:latest
-            
-#             # Stop, Remove, and Run the New Container
-#             docker stop fast-api || true
-#             docker rm fast-api || true
-#             docker run -d -p 8000:8000 --name fast-api 522814707197.dkr.ecr.eu-north-1.amazonaws.com/fast-api:latest
-
-
-
-
-name: CD - Deploy to AWS
-on:
-  push:
-    branches:
-      - main
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.AWS_HOST }}
-          username: ubuntu
-          key: ${{ secrets.AWS_PRIVATE_KEY }}
-          script: |
-            cd fastapi-book-project
-            
-            # Fetch the latest changes
-            git fetch origin main
-
-            # Reset the repository to match the remote main branch
-            git reset --hard origin/main
-            git clean -fd
-
-            # Force pull the latest changes
-            git pull origin main --force
-            
-            # Stop and remove existing containers
-            docker-compose down || true
-            
-            # Rebuild and restart containers
-            docker-compose up -d --build
-            
-            # Verify running containers
-            docker ps
-
-
-
-
 # name: CD - Deploy to AWS
 # on:
 #   push:
@@ -125,9 +18,14 @@ jobs:
 #           script: |
 #             cd fastapi-book-project
             
-#             # Reset and pull the latest changes forcefully
+#             # Fetch the latest changes
+#             git fetch origin main
+
+#             # Reset the repository to match the remote main branch
 #             git reset --hard origin/main
 #             git clean -fd
+
+#             # Force pull the latest changes
 #             git pull origin main --force
             
 #             # Stop and remove existing containers
@@ -138,3 +36,40 @@ jobs:
             
 #             # Verify running containers
 #             docker ps
+
+
+
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: deploy  # Job name must be exactly "deploy"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USERNAME }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            mkdir -p /home/${{ secrets.AWS_USERNAME }}/app
+            cd /home/${{ secrets.AWS_USERNAME }}/app
+            
+            docker compose down || true
+            
+            rm -rf hng12-stage2-fastapi-book-project
+            git clone https://github.com/onlydurodola/hng12-stage2-fastapi-book-project.git
+            cd hng12-stage2-fastapi-book-project
+            
+            docker compose up --build -d
+
