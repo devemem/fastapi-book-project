@@ -95,7 +95,7 @@ jobs:
 
       - name: Debug SSH Connection
         run: |
-          echo "${{ secrets.AWS_SSH_KEY }}" > private_key.pem
+          echo "${{ secrets.AWS_SSH_KEY }}" > server-fastKP.pem
           chmod 600 server-fastKP.pem
           ssh -i server-fastKP.pem -o StrictHostKeyChecking=no ${{ secrets.AWS_VM_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful!'"
 
