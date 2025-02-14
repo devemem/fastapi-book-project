@@ -95,9 +95,9 @@ jobs:
 
       - name: Debug SSH Connection
         run: |
-          echo "${{ secrets.AWS_SSH_KEY }}" > server-fastKP.pem
-          chmod 600 server-fastKP.pem
-          ssh -i server-fastKP.pem -o StrictHostKeyChecking=no ${{ secrets.AWS_VM_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful!'"
+          echo "${{ secrets.AWS_SSH_KEY }}" > serve-fastKP.pem
+          chmod 600 serve-fastKP.pem
+          ssh -i serve-fastKP.pem -o StrictHostKeyChecking=no ${{ secrets.AWS_VM_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful!'"
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
