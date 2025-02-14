@@ -59,11 +59,11 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.AWS_HOST }}
-          username: ${{ secrets.AWS_USERNAME }}
+          username: ${{ secrets.AWS_VM_USERNAME }}
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            mkdir -p /home/${{ secrets.AWS_USERNAME }}/app
-            cd /home/${{ secrets.AWS_USERNAME }}/app
+            mkdir -p /home/${{ secrets.AWS_VM_USERNAME }}/app
+            cd /home/${{ secrets.AWS_VM_USERNAME }}/app
             
             docker compose down || true
             
