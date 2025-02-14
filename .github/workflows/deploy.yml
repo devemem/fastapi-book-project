@@ -75,6 +75,10 @@ jobs:
           username: ${{ secrets.AWS_VM_USERNAME }}
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
+            # Kill any process using port 8000
+            sudo fuser -k 8000/tcp || true
+            sudo fuser -k 80/tcp || true
+          
             # Update package index and install dependencies
             sudo apt-get update -y
             sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
@@ -101,10 +105,6 @@ jobs:
             sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
           
-            # Verify installations
-            docker --version
-            docker-compose --version
-          
             # Restart Docker and check status
             sudo systemctl restart docker
             sudo systemctl status docker --no-pager
@@ -116,6 +116,9 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
           
+            # Kill any existing container before running a new one
+            docker stop fastapi-book-project || true
+            docker rm fastapi-book-project || true
+          
             # Run the container
             docker-compose up -d --build
-
