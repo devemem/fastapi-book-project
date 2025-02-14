@@ -23,7 +23,7 @@
 FROM python:3.9-slim
 
 # Set work directory
-WORKDIR /fastapi
+WORKDIR /app
 
 # Install dependencies
 COPY requirements.txt .
@@ -37,4 +37,4 @@ COPY . .
 EXPOSE 8000
 
 # Run the FastAPI application using Uvicorn
-CMD ["uvicorn", "main:fastapi", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
