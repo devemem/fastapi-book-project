@@ -39,6 +39,44 @@
 
 
 
+# name: CD Pipeline
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# jobs:
+#   deploy:
+#     name: deploy  # Job name must be exactly "deploy"
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Deploy to EC2
+#         uses: appleboy/ssh-action@master
+#         with:
+#           host: ${{ secrets.AWS_HOST }}
+#           username: ${{ secrets.AWS_VM_USERNAME }}
+#           key: ${{ secrets.AWS_SSH_KEY }}
+#           script: |
+#             mkdir -p /home/${{ secrets.AWS_VM_USERNAME }}/app
+#             cd /home/${{ secrets.AWS_VM_USERNAME }}/app
+            
+#             docker compose down || true
+            
+#             rm -rf hng12-stage2-fastapi-book-project
+#             git clone https://github.com/onlydurodola/hng12-stage2-fastapi-book-project.git
+#             cd hng12-stage2-fastapi-book-project
+            
+#             docker compose up --build -d
+
+
+
+
+
 name: CD Pipeline
 
 on:
@@ -55,6 +93,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug SSH Connection
+        run: |
+          echo "${{ secrets.AWS_SSH_KEY }}" > private_key.pem
+          chmod 600 serve-fastKP.pem
+          ssh -i serve-fastKP.pem -o StrictHostKeyChecking=no ${{ secrets.AWS_VM_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful!'"
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
@@ -62,14 +106,30 @@ jobs:
           username: ${{ secrets.AWS_VM_USERNAME }}
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
+            set -e  # Exit on error
+
+            # Ensure Docker & Docker Compose are installed
+            docker -v
+            docker compose version || sudo apt-get install -y docker-compose
+
+            # Create app directory
             mkdir -p /home/${{ secrets.AWS_VM_USERNAME }}/app
             cd /home/${{ secrets.AWS_VM_USERNAME }}/app
-            
+
+            # Stop existing containers safely
             docker compose down || true
-            
-            rm -rf hng12-stage2-fastapi-book-project
-            git clone https://github.com/onlydurodola/hng12-stage2-fastapi-book-project.git
-            cd hng12-stage2-fastapi-book-project
-            
+
+            # If repo exists, pull latest changes; otherwise, clone
+            if [ -d "hng12-stage2-fastapi-book-project" ]; then
+              cd hng12-stage2-fastapi-book-project
+              git reset --hard
+              git pull origin main
+            else
+              git clone https://github.com/onlydurodola/hng12-stage2-fastapi-book-project.git
+              cd hng12-stage2-fastapi-book-project
+            fi
+
+            # Start Docker containers
             docker compose up --build -d
+
 
