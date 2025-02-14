@@ -1,12 +1,31 @@
-version: '3.8'
+# version: '3.8'
 
+# services:
+#   app:
+#     build: .
+#     container_name: fastapi-book-project
+#     ports:
+#       - "8000:8000"
+#     restart: always
+
+
+version: '3.8'
 services:
   app:
     build: .
-    container_name: fastapi-book-project
+    container_name: fastapi-app
     ports:
       - "8000:8000"
-    restart: always
+
+  nginx:
+    image: nginx:latest
+    container_name: fastapi-nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - app
 
 # version: "3.8"
 
