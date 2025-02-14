@@ -65,35 +65,6 @@
 
 
 
-# name: CD - Deploy to AWS
-# on:
-#   push:
-#     branches:
-#       - main
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v3
-#       - name: Deploy to EC2
-#         uses: appleboy/ssh-action@v0.1.8
-#         with:
-#           host: ${{ secrets.AWS_HOST }}
-#           username: ubuntu
-#           key: ${{ secrets.AWS_PRIVATE_KEY }}
-#           script: |
-#             cd fastapi-book-project
-#             git pull origin main
-#             git stash
-#             # Stop existing containers
-#             docker-compose down || true
-#             docker-compose up -d --build
-#             docker ps
-
-
-
-
 name: CD - Deploy to AWS
 on:
   push:
@@ -114,9 +85,14 @@ jobs:
           script: |
             cd fastapi-book-project
             
-            # Reset and pull the latest changes forcefully
+            # Fetch the latest changes
+            git fetch origin main
+
+            # Reset the repository to match the remote main branch
             git reset --hard origin/main
             git clean -fd
+
+            # Force pull the latest changes
             git pull origin main --force
             
             # Stop and remove existing containers
@@ -127,3 +103,40 @@ jobs:
             
             # Verify running containers
             docker ps
+
+
+
+
+# name: CD - Deploy to AWS
+# on:
+#   push:
+#     branches:
+#       - main
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+#       - name: Deploy to EC2
+#         uses: appleboy/ssh-action@v0.1.8
+#         with:
+#           host: ${{ secrets.AWS_HOST }}
+#           username: ubuntu
+#           key: ${{ secrets.AWS_PRIVATE_KEY }}
+#           script: |
+#             cd fastapi-book-project
+            
+#             # Reset and pull the latest changes forcefully
+#             git reset --hard origin/main
+#             git clean -fd
+#             git pull origin main --force
+            
+#             # Stop and remove existing containers
+#             docker-compose down || true
+            
+#             # Rebuild and restart containers
+#             docker-compose up -d --build
+            
+#             # Verify running containers
+#             docker ps
