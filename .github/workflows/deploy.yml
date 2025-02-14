@@ -1,44 +1,3 @@
-# name: CD - Deploy to AWS
-# on:
-#   push:
-#     branches:
-#       - main
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v3
-#       - name: Deploy to EC2
-#         uses: appleboy/ssh-action@v0.1.8
-#         with:
-#           host: ${{ secrets.AWS_HOST }}
-#           username: ubuntu
-#           key: ${{ secrets.AWS_PRIVATE_KEY }}
-#           script: |
-#             cd fastapi-book-project
-            
-#             # Fetch the latest changes
-#             git fetch origin main
-
-#             # Reset the repository to match the remote main branch
-#             git reset --hard origin/main
-#             git clean -fd
-
-#             # Force pull the latest changes
-#             git pull origin main --force
-            
-#             # Stop and remove existing containers
-#             docker-compose down || true
-            
-#             # Rebuild and restart containers
-#             docker-compose up -d --build
-            
-#             # Verify running containers
-#             docker ps
-
-
-
 # name: CD Pipeline
 
 # on:
@@ -55,6 +14,14 @@
 #       - name: Checkout code
 #         uses: actions/checkout@v4
 
+#       - name: Debug SSH Connection
+#         run: |
+#             echo "${{ secrets.AWS_SSH_KEY }}" > private_key.pem
+#             chmod 600 private_key.pem
+#             ls -l private_key.pem  # Check if file exists
+#             ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ secrets.AWS_VM_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful!'"
+
+
 #       - name: Deploy to EC2
 #         uses: appleboy/ssh-action@master
 #         with:
@@ -62,76 +29,80 @@
 #           username: ${{ secrets.AWS_VM_USERNAME }}
 #           key: ${{ secrets.AWS_SSH_KEY }}
 #           script: |
+#             set -e  # Exit on error
+
+#             # Ensure Docker & Docker Compose are installed
+#             docker -v
+#             docker compose version || sudo apt-get install -y docker-compose
+
+#             # Create app directory
 #             mkdir -p /home/${{ secrets.AWS_VM_USERNAME }}/app
 #             cd /home/${{ secrets.AWS_VM_USERNAME }}/app
-            
+
+#             # Stop existing containers safely
 #             docker compose down || true
-            
-#             rm -rf hng12-stage2-fastapi-book-project
-#             git clone https://github.com/onlydurodola/hng12-stage2-fastapi-book-project.git
-#             cd hng12-stage2-fastapi-book-project
-            
+
+#             # If repo exists, pull latest changes; otherwise, clone
+#             if [ -d "hng12-stage2-fastapi-book-project" ]; then
+#               cd hng12-stage2-fastapi-book-project
+#               git reset --hard
+#               git pull origin main
+#             else
+#               git clone https://github.com/onlydurodola/hng12-stage2-fastapi-book-project.git
+#               cd hng12-stage2-fastapi-book-project
+#             fi
+
+#             # Start Docker containers
 #             docker compose up --build -d
 
 
 
-
-
 name: CD Pipeline
-
 on:
   push:
-    branches:
-      - main
-
+    branches: [main]
 jobs:
   deploy:
-    name: deploy  # Job name must be exactly "deploy"
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Debug SSH Connection
-        run: |
-            echo "${{ secrets.AWS_SSH_KEY }}" > private_key.pem
-            chmod 600 private_key.pem
-            ls -l private_key.pem  # Check if file exists
-            ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ secrets.AWS_VM_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful!'"
-
-
-      - name: Deploy to EC2
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.AWS_HOST }}
           username: ${{ secrets.AWS_VM_USERNAME }}
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            set -e  # Exit on error
+            # Update package index and install dependencies
+            sudo apt-get update -y
+            sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
 
-            # Ensure Docker & Docker Compose are installed
-            docker -v
-            docker compose version || sudo apt-get install -y docker-compose
+            # Add Docker's official GPG key
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+            sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 
-            # Create app directory
-            mkdir -p /home/${{ secrets.AWS_VM_USERNAME }}/app
-            cd /home/${{ secrets.AWS_VM_USERNAME }}/app
+            # Install Docker
+            sudo apt-get update -y
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
-            # Stop existing containers safely
-            docker compose down || true
+            # Add the SSH user to the Docker group
+            sudo usermod -aG docker ${{ secrets.AWS_VM_USERNAME }}
 
-            # If repo exists, pull latest changes; otherwise, clone
-            if [ -d "hng12-stage2-fastapi-book-project" ]; then
-              cd hng12-stage2-fastapi-book-project
-              git reset --hard
-              git pull origin main
-            else
-              git clone https://github.com/onlydurodola/hng12-stage2-fastapi-book-project.git
-              cd hng12-stage2-fastapi-book-project
-            fi
+            # Install Docker Compose
+            sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
 
-            # Start Docker containers
-            docker compose up --build -d
+            # Verify installations
+            docker --version
+            docker-compose --version
 
+            # Navigate to the project directory and deploy
+            cd /home/ubuntu/
+            git clone https://github.com/devemem/fastapi-book-project.git
+            cd fastapi-book-project/
+            git fetch origin main
+            git reset --hard origin/main
+            docker-compose up -d --build
 
